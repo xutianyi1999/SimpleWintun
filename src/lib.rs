@@ -72,8 +72,8 @@ mod ffi {
 }
 
 pub enum ReadResult {
-    Success(u32),
-    NotEnoughSize(u32),
+    Success(usize),
+    NotEnoughSize(usize),
 }
 
 pub mod raw {
@@ -217,8 +217,8 @@ pub mod raw {
         let res_code: Code = unsafe { ffi::read_packet(session, read_wait, buff.as_mut_ptr(), &mut size) };
 
         match res_code {
-            SUCCESS_CODE => Ok(ReadResult::Success(size)),
-            NOT_ENOUGH_SIZE_CODE => Ok(ReadResult::NotEnoughSize(size)),
+            SUCCESS_CODE => Ok(ReadResult::Success(size as usize)),
+            NOT_ENOUGH_SIZE_CODE => Ok(ReadResult::NotEnoughSize(size as usize)),
             _ => Err(Error::last_os_error())
         }
     }
