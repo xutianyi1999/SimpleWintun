@@ -338,6 +338,10 @@ pub mod adapter {
             raw::close_adapter(self.session)
         }
     }
+
+    unsafe impl Send for WintunStream {}
+
+    unsafe impl Sync for WintunStream {}
 }
 
 #[cfg(test)]
