@@ -257,24 +257,25 @@ pub mod adapter {
     }
 
     impl WintunAdapter {
+        pub fn initialize() -> () {
+            raw::initialize()
+        }
+
         pub fn create_adapter(
             pool_name: &str,
             adapter_name: &str,
             guid: &str,
         ) -> Result<WintunAdapter> {
-            raw::initialize();
             let adapter: Adapter = raw::create_adapter(pool_name, adapter_name, guid)?;
             Ok(WintunAdapter { adapter })
         }
 
         pub fn get_adapter(pool_name: &str, adapter_name: &str) -> Result<WintunAdapter> {
-            raw::initialize();
             let adapter: Adapter = raw::get_adapter(pool_name, adapter_name)?;
             Ok(WintunAdapter { adapter })
         }
 
         pub fn get_drive_version() -> u32 {
-            raw::initialize();
             raw::get_drive_version()
         }
 
