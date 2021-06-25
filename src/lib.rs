@@ -249,11 +249,12 @@ pub mod raw {
 
 pub mod adapter {
     use std::io::Result;
+    use std::ptr::null_mut;
 
     use crate::{Adapter, Event, raw, ReadResult, Session};
 
     pub struct WintunAdapter {
-        pub adapter: Adapter
+        pub adapter: Adapter,
     }
 
     impl WintunAdapter {
@@ -318,9 +319,9 @@ pub mod adapter {
 
     impl WintunStream {
         #[inline]
-        pub fn close_adapter(self) {
+        pub fn close_adapter(mut self) {
             raw::close_adapter(self.session);
-            std::mem::forget(self)
+            self.session = null_mut()
         }
 
         #[inline]
@@ -337,7 +338,9 @@ pub mod adapter {
     impl Drop for WintunStream {
         #[inline]
         fn drop(&mut self) {
-            raw::close_adapter(self.session)
+            if self.session != null_mut() {
+                raw::close_adapter(self.session)
+            }
         }
     }
 
