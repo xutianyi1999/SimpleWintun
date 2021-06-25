@@ -253,7 +253,7 @@ pub mod adapter {
     use crate::{Adapter, Event, raw, ReadResult, Session};
 
     pub struct WintunAdapter {
-        adapter: Adapter
+        pub adapter: Adapter
     }
 
     impl WintunAdapter {
@@ -312,8 +312,8 @@ pub mod adapter {
     }
 
     pub struct WintunStream {
-        session: Session,
-        event: Event,
+        pub session: Session,
+        pub event: Event,
     }
 
     impl WintunStream {
