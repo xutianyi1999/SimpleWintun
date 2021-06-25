@@ -319,7 +319,8 @@ pub mod adapter {
     impl WintunStream {
         #[inline]
         pub fn close_adapter(self) {
-            raw::close_adapter(self.session)
+            raw::close_adapter(self.session);
+            std::mem::forget(self)
         }
 
         #[inline]
