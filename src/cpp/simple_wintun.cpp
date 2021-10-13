@@ -1,10 +1,6 @@
 #include <winsock2.h>
-#include <Windows.h>
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
-#include <ip2string.h>
-#include <stdarg.h>
-#include <stdio.h>
 #include <ws2tcpip.h>
 #include <string>
 #include "simple_wintun.h"
