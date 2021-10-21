@@ -319,12 +319,6 @@ pub mod adapter {
 
     impl WintunStream {
         #[inline]
-        pub fn close_adapter(mut self) {
-            raw::close_adapter(self.session);
-            self.session = null_mut()
-        }
-
-        #[inline]
         pub fn read_packet(&self, buff: &mut [u8]) -> Result<ReadResult> {
             raw::read_packet(self.session, self.event, buff)
         }
@@ -338,9 +332,7 @@ pub mod adapter {
     impl Drop for WintunStream {
         #[inline]
         fn drop(&mut self) {
-            if !self.session.is_null() {
-                raw::close_adapter(self.session)
-            }
+            raw::close_adapter(self.session)
         }
     }
 
