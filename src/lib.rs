@@ -332,7 +332,9 @@ pub mod adapter {
     impl Drop for WintunStream {
         #[inline]
         fn drop(&mut self) {
-            raw::close_adapter(self.session)
+            if !self.session.is_null() {
+                raw::close_adapter(self.session)
+            }
         }
     }
 
