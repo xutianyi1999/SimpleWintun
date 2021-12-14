@@ -1,49 +1,63 @@
 #pragma once
 
-typedef void *ADAPTER;
-typedef void *SESSION;
+#include "wintun.h"
+
 typedef void *EVENT;
 typedef unsigned char CODE;
+typedef unsigned char BYTE;
 
 const CODE SUCCESS_CODE = 0;
 const CODE OS_ERROR_CODE = 1;
 const CODE NOT_ENOUGH_SIZE_CODE = 2;
 const CODE PARSE_GUID_ERROR_CODE = 3;
 const CODE IP_ADDRESS_ERROR_CODE = 4;
-const CODE STRING_COPY_ERROR_CODE = 5;
 
 extern "C" {
 CODE initialize_wintun();
+
+CODE delete_driver();
 
 CODE create_adapter(
         const char *pool_name,
         const char *adapter_name,
         const char *guid_str,
-        ADAPTER *adapter
+        WINTUN_ADAPTER_HANDLE *adapter
 );
 
-CODE delete_adapter(ADAPTER adapter);
+CODE open_adapter(const char *adapter_name, WINTUN_ADAPTER_HANDLE *adapter);
 
-CODE delete_pool(const char *pool_name);
+void close_adapter(WINTUN_ADAPTER_HANDLE adapter);
 
-CODE get_adapter(const char *pool_name, const char *adapter_name, ADAPTER *adapter);
+NET_LUID get_adapter_luid(WINTUN_ADAPTER_HANDLE adapter);
 
-CODE get_adapter_name(ADAPTER adapter, char *adapter_name, unsigned char size);
+CODE get_drive_version(unsigned long *version);
 
-CODE set_adapter_name(ADAPTER adapter, const char *adapter_name);
+CODE start_session(
+        WINTUN_ADAPTER_HANDLE adapter,
+        unsigned long capacity,
+        WINTUN_SESSION_HANDLE *session
+);
 
-CODE set_ipaddr(ADAPTER adapter, const char *ipaddr, unsigned char subnet_mask);
+void end_session(WINTUN_SESSION_HANDLE session);
 
-CODE open_adapter(ADAPTER adapter, unsigned long capacity, SESSION *session);
+EVENT get_read_wait_event(WINTUN_SESSION_HANDLE session);
 
-void close_adapter(SESSION session);
+CODE read_packet(
+        WINTUN_SESSION_HANDLE session,
+        EVENT read_wait,
+        BYTE *buff,
+        unsigned long *size
+);
 
-EVENT get_read_wait_event(SESSION session);
+CODE write_packet(
+        WINTUN_SESSION_HANDLE session,
+        BYTE *buff,
+        unsigned long size
+);
 
-CODE read_packet(SESSION session, EVENT read_wait, unsigned char *buff, unsigned long *size);
-
-CODE write_packet(SESSION session, const unsigned char *buff, unsigned long size);
-
-unsigned long get_drive_version();
+CODE set_ipaddr(
+        WINTUN_ADAPTER_HANDLE adapter,
+        const char *ipaddr,
+        BYTE subnet_mask
+);
 }
-
