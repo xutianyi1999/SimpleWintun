@@ -239,7 +239,7 @@ pub mod adapter {
 
     fn initialize() -> Result<()> {
         static STATE: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
-        let guard = STATE.lock().map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        let mut guard = STATE.lock().map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
         if !*guard {
             raw::initialize()?;
