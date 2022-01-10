@@ -18,8 +18,8 @@ CODE initialize_wintun();
 CODE delete_driver();
 
 CODE create_adapter(
-        const char *pool_name,
         const char *adapter_name,
+        const char *tunnel_type,
         const char *guid_str,
         WINTUN_ADAPTER_HANDLE *adapter
 );

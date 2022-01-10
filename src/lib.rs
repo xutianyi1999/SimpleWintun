@@ -34,8 +34,8 @@ mod ffi {
         pub fn delete_driver() -> Code;
 
         pub fn create_adapter(
-            pool_name: *const c_char,
             adapter_name: *const c_char,
+            tunnel_type: *const c_char,
             guid_str: *const c_char,
             adapter: *mut AdapterHandle,
         ) -> Code;
@@ -119,16 +119,16 @@ pub mod raw {
     }
 
     pub fn create_adapter(
-        pool_name: &str,
         adapter_name: &str,
+        tunnel_type: &str,
         guid: &str,
     ) -> Result<AdapterHandle> {
         let mut adapter: AdapterHandle = null_mut();
 
         let res = unsafe {
             ffi::create_adapter(
-                (pool_name.to_owned() + "\0").as_ptr() as *const c_char,
                 (adapter_name.to_owned() + "\0").as_ptr() as *const c_char,
+                (tunnel_type.to_owned() + "\0").as_ptr() as *const c_char,
                 (guid.to_owned() + "\0").as_ptr() as *const c_char,
                 &mut adapter,
             )
@@ -267,16 +267,16 @@ pub mod adapter {
 
     impl WintunAdapter {
         pub fn create_adapter(
-            pool_name: &str,
             adapter_name: &str,
+            tunnel_type: &str,
             guid: &str,
         ) -> Result<WintunAdapter> {
             initialize()?;
-            let adapter: AdapterHandle = raw::create_adapter(pool_name, adapter_name, guid)?;
+            let adapter: AdapterHandle = raw::create_adapter(adapter_name, tunnel_type, guid)?;
 
             Ok(WintunAdapter {
                 adapter: HandleWrap::new(adapter),
-                adapter_name: adapter_name.to_string(),
+                adapter_name: tunnel_type.to_string(),
             })
         }
 

@@ -71,13 +71,13 @@ CODE delete_driver() {
 }
 
 CODE create_adapter(
-        const char *pool_name,
         const char *adapter_name,
+        const char *tunnel_type,
         const char *guid_str,
         WINTUN_ADAPTER_HANDLE *adapter
 ) {
-    auto wc_pool_name = get_ws(pool_name);
     auto wc_adapter_name = get_ws(adapter_name);
+    auto wc_tunnel_type = get_ws(tunnel_type);
     auto wc_guid = get_ws(guid_str);
     const wchar_t *pguid = wc_guid.c_str();
 
@@ -89,8 +89,8 @@ CODE create_adapter(
     }
 
     WINTUN_ADAPTER_HANDLE inner_adapter = WintunCreateAdapter(
-            wc_pool_name.c_str(),
             wc_adapter_name.c_str(),
+            wc_tunnel_type.c_str(),
             &guid
     );
 
