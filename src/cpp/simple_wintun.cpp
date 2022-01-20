@@ -162,32 +162,32 @@ CODE read_packet(
         BYTE *buff,
         unsigned long *size
 ) {
-    unsigned long packet_size;
-    BYTE *packet = WintunReceivePacket(session, &packet_size);
+    while (true) {
+        unsigned long packet_size;
+        BYTE * packet = WintunReceivePacket(session, &packet_size);
 
-    if (packet) {
-        if (*size >= packet_size) {
-            memcpy(buff, packet, packet_size);
-            *size = packet_size;
-            WintunReleaseReceivePacket(session, packet);
+        if (packet) {
+            if (*size >= packet_size) {
+                memcpy(buff, packet, packet_size);
+                *size = packet_size;
+                WintunReleaseReceivePacket(session, packet);
 
-            return SUCCESS_CODE;
+                return SUCCESS_CODE;
+            } else {
+                WintunReleaseReceivePacket(session, packet);
+                *size = packet_size;
+                return NOT_ENOUGH_SIZE_CODE;
+            }
         } else {
-            WintunReleaseReceivePacket(session, packet);
-            *size = packet_size;
-            return NOT_ENOUGH_SIZE_CODE;
-        }
-    } else {
-        DWORD last_error = GetLastError();
+            DWORD last_error = GetLastError();
 
-        if (last_error == ERROR_NO_MORE_ITEMS) {
-            if (WaitForSingleObject(read_wait, INFINITE) == WAIT_OBJECT_0) {
-                return read_packet(session, read_wait, buff, size);
+            if (last_error == ERROR_NO_MORE_ITEMS) {
+                if (WaitForSingleObject(read_wait, INFINITE) != WAIT_OBJECT_0) {
+                    return OS_ERROR_CODE;
+                }
             } else {
                 return OS_ERROR_CODE;
             }
-        } else {
-            return OS_ERROR_CODE;
         }
     }
 }
