@@ -260,7 +260,7 @@ pub mod adapter {
             raw::close_adapter(self.adapter.handle);
 
             if let Err(e) = raw::delete_driver() {
-                error!("Delete wintun driver error: {:?}", e);
+                error!("Delete wintun driver error: {}", e);
             }
         }
     }
