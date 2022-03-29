@@ -4,7 +4,7 @@ Wintun rust API library
 
 ### Usage
 
-Wintun.dll (https://www.wintun.net) needs to be in the same directory as the executable file or under System32
+Wintun.dll (https://www.wintun.net) needs to be in the same directory as the executable file or in System32
 
 Cargo.toml
 
