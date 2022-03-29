@@ -4,7 +4,7 @@ Wintun rust API library
 
 ### Usage
 
-Wintun.dll (https://www.wintun.net) needs to be in the same directory as the executable file or in System32
+wintun.dll (https://www.wintun.net) needs to be in the same directory as the executable file or in System32
 
 Cargo.toml
 
@@ -41,13 +41,13 @@ fn main() {
             }
         };
 
-        let mut buff = [0u8; 4];
+        let mut addr_buff = [0u8; 4];
 
-        buff.copy_from_slice(&packet[SRC_ADDR]);
-        let src_addr = Ipv4Addr::from(buff);
+        addr_buff.copy_from_slice(&packet[SRC_ADDR]);
+        let src_addr = Ipv4Addr::from(addr_buff);
 
-        buff.copy_from_slice(&packet[DST_ADDR]);
-        let dst_addr = Ipv4Addr::from(buff);
+        addr_buff.copy_from_slice(&packet[DST_ADDR]);
+        let dst_addr = Ipv4Addr::from(addr_buff);
 
         println!("packet {} -> {}", src_addr, dst_addr)
     }
