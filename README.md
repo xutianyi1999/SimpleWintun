@@ -27,7 +27,7 @@ const DST_ADDR: Range<usize> = 16..20;
 fn main() {
     let adapter = WintunAdapter::create_adapter("example", "test", "{D4C24D32-A723-DB80-A493-4E32E7883F15}").unwrap();
     adapter.set_ipaddr("192.168.8.1", 24).unwrap();
-    let session = adapter.start_session(4096).unwrap();
+    let session = adapter.start_session(0x20000).unwrap();
 
     let mut buff = vec![0u8; 65536];
 
