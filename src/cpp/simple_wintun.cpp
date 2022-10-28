@@ -1,11 +1,8 @@
-#include <winsock2.h>
-#include <ws2ipdef.h>
+#include "simple_wintun.h"
+#include <string>
 #include <iphlpapi.h>
 #include <ws2tcpip.h>
-#include <string>
-#include "simple_wintun.h"
 
-#pragma comment(lib, "Ws2_32")
 #pragma comment(lib, "iphlpapi")
 #pragma comment(lib, "ole32")
 
