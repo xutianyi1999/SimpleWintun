@@ -11,6 +11,7 @@ const CODE OS_ERROR_CODE = 1;
 const CODE NOT_ENOUGH_SIZE_CODE = 2;
 const CODE PARSE_GUID_ERROR_CODE = 3;
 const CODE IP_ADDRESS_ERROR_CODE = 4;
+const CODE EVENT_WAIT_TIMEOUT = 5;
 
 extern "C" {
 CODE initialize_wintun();
@@ -30,7 +31,7 @@ void close_adapter(WINTUN_ADAPTER_HANDLE adapter);
 
 NET_LUID get_adapter_luid(WINTUN_ADAPTER_HANDLE adapter);
 
-CODE get_drive_version(unsigned long *version);
+CODE get_driver_version(unsigned long *version);
 
 CODE start_session(
         WINTUN_ADAPTER_HANDLE adapter,
@@ -41,6 +42,14 @@ CODE start_session(
 void end_session(WINTUN_SESSION_HANDLE session);
 
 EVENT get_read_wait_event(WINTUN_SESSION_HANDLE session);
+
+CODE wait_event(EVENT read_wait, unsigned int time_ms);
+
+CODE read_packet_nonblock(
+        WINTUN_SESSION_HANDLE session,
+        BYTE *buff,
+        unsigned long *size
+);
 
 CODE read_packet(
         WINTUN_SESSION_HANDLE session,

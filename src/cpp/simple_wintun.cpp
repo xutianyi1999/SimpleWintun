@@ -121,7 +121,7 @@ NET_LUID get_adapter_luid(WINTUN_ADAPTER_HANDLE adapter) {
     return luid;
 }
 
-CODE get_drive_version(unsigned long *version) {
+CODE get_driver_version(unsigned long *version) {
     *version = WintunGetRunningDriverVersion();
 
     if (*version == 0) {
@@ -153,6 +153,43 @@ EVENT get_read_wait_event(WINTUN_SESSION_HANDLE session) {
     return WintunGetReadWaitEvent(session);
 }
 
+CODE wait_event(EVENT read_wait, unsigned int time_ms) {
+    auto res = WaitForSingleObject(read_wait, time_ms);
+
+    if (res == WAIT_OBJECT_0) {
+        return SUCCESS_CODE;
+    } else if (res == WAIT_TIMEOUT) {
+        return EVENT_WAIT_TIMEOUT;
+    } else {
+        return OS_ERROR_CODE;
+    }
+}
+
+CODE read_packet_nonblock(
+        WINTUN_SESSION_HANDLE session,
+        BYTE *buff,
+        unsigned long *size
+) {
+    unsigned long packet_size;
+    BYTE *packet = WintunReceivePacket(session, &packet_size);
+
+    if (packet) {
+        if (*size >= packet_size) {
+            memcpy(buff, packet, packet_size);
+            *size = packet_size;
+            WintunReleaseReceivePacket(session, packet);
+
+            return SUCCESS_CODE;
+        } else {
+            WintunReleaseReceivePacket(session, packet);
+            *size = packet_size;
+            return NOT_ENOUGH_SIZE_CODE;
+        }
+    } else {
+        return OS_ERROR_CODE;
+    }
+}
+
 CODE read_packet(
         WINTUN_SESSION_HANDLE session,
         EVENT read_wait,
@@ -160,31 +197,20 @@ CODE read_packet(
         unsigned long *size
 ) {
     while (true) {
-        unsigned long packet_size;
-        BYTE * packet = WintunReceivePacket(session, &packet_size);
+        CODE res = read_packet_nonblock(session, buff, size);
 
-        if (packet) {
-            if (*size >= packet_size) {
-                memcpy(buff, packet, packet_size);
-                *size = packet_size;
-                WintunReleaseReceivePacket(session, packet);
+        if (res != OS_ERROR_CODE) {
+            return res;
+        }
 
-                return SUCCESS_CODE;
-            } else {
-                WintunReleaseReceivePacket(session, packet);
-                *size = packet_size;
-                return NOT_ENOUGH_SIZE_CODE;
-            }
-        } else {
-            DWORD last_error = GetLastError();
+        DWORD last_error = GetLastError();
 
-            if (last_error == ERROR_NO_MORE_ITEMS) {
-                if (WaitForSingleObject(read_wait, INFINITE) != WAIT_OBJECT_0) {
-                    return OS_ERROR_CODE;
-                }
-            } else {
+        if (last_error == ERROR_NO_MORE_ITEMS) {
+            if (WaitForSingleObject(read_wait, INFINITE) != WAIT_OBJECT_0) {
                 return OS_ERROR_CODE;
             }
+        } else {
+            return OS_ERROR_CODE;
         }
     }
 }

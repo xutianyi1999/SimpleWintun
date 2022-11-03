@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate log;
 
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
+use std::io;
 use std::os::raw::c_void;
 
 pub type AdapterHandle = *mut c_void;
@@ -28,7 +31,7 @@ mod ffi {
 
     use crate::{AdapterHandle, Code, Event, Session};
 
-    extern {
+    extern "C" {
         pub fn initialize_wintun() -> Code;
 
         pub fn delete_driver() -> Code;
@@ -47,7 +50,7 @@ mod ffi {
 
         pub fn close_adapter(adapter: AdapterHandle);
 
-        pub fn get_drive_version(version: *mut u32) -> Code;
+        pub fn get_driver_version(version: *mut u32) -> Code;
 
         pub fn start_session(
             adapter: AdapterHandle,
@@ -58,6 +61,14 @@ mod ffi {
         pub fn end_session(session: Session);
 
         pub fn get_read_wait_event(session: Session) -> Event;
+
+        pub fn wait_event(event: Event, time: u32) -> Code;
+
+        pub fn read_packet_nonblock(
+            session: Session,
+            buff: *mut u8,
+            size: *mut u32,
+        ) -> Code;
 
         pub fn read_packet(
             session: Session,
@@ -80,9 +91,50 @@ mod ffi {
     }
 }
 
-pub enum ReadResult {
-    Success(usize),
+#[derive(Debug)]
+pub enum WaitError {
+    Timeout,
+    IoError(io::Error),
+}
+
+impl Display for WaitError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WaitError::Timeout => write!(f, "Wait timeout"),
+            WaitError::IoError(e) => write!(f, "{}", e)
+        }
+    }
+}
+
+impl Error for WaitError {}
+
+#[derive(Debug)]
+pub enum ReadError {
     NotEnoughSize(usize),
+    IoError(io::Error),
+    NoMoreItems,
+}
+
+impl Display for ReadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReadError::IoError(e) => write!(f, "{}", e),
+            ReadError::NotEnoughSize(len) => write!(f, "Not enough size: {}", len),
+            ReadError::NoMoreItems => write!(f, "No more items")
+        }
+    }
+}
+
+impl Error for ReadError {}
+
+impl From<ReadError> for io::Error {
+    fn from(e: ReadError) -> Self {
+        match e {
+            ReadError::NotEnoughSize(_) => io::Error::new(io::ErrorKind::Other, e),
+            ReadError::IoError(e) => e,
+            ReadError::NoMoreItems => io::Error::new(io::ErrorKind::WouldBlock, "No more items")
+        }
+    }
 }
 
 pub mod raw {
@@ -90,7 +142,7 @@ pub mod raw {
     use std::os::raw::c_char;
     use std::ptr::null_mut;
 
-    use crate::{AdapterHandle, Code, Event, ffi, ReadResult, Session};
+    use crate::{AdapterHandle, Code, Event, ffi, ReadError, Session, WaitError};
 
     const SUCCESS_CODE: Code = 0;
     #[allow(dead_code)]
@@ -99,6 +151,7 @@ pub mod raw {
     const PARSE_GUID_ERROR_CODE: Code = 3;
     #[allow(dead_code)]
     const IP_ADDRESS_ERROR_CODE: Code = 4;
+    const EVENT_WAIT_TIMEOUT: Code = 5;
 
     pub fn initialize() -> Result<()> {
         let res = unsafe { ffi::initialize_wintun() };
@@ -161,9 +214,9 @@ pub mod raw {
         unsafe { ffi::close_adapter(adapter) }
     }
 
-    pub fn get_drive_version() -> Result<u32> {
+    pub fn get_driver_version() -> Result<u32> {
         let mut version = 0;
-        let res = unsafe { ffi::get_drive_version(&mut version) };
+        let res = unsafe { ffi::get_driver_version(&mut version) };
 
         match res {
             SUCCESS_CODE => Ok(version),
@@ -189,18 +242,48 @@ pub mod raw {
         unsafe { ffi::get_read_wait_event(session) }
     }
 
+    pub fn wait_event(event: Event, time_ms: u32) -> std::result::Result<(), WaitError> {
+        let res = unsafe { ffi::wait_event(event, time_ms) };
+
+        match res {
+            SUCCESS_CODE => Ok(()),
+            EVENT_WAIT_TIMEOUT => Err(WaitError::Timeout),
+            _ => Err(WaitError::IoError(Error::last_os_error()))
+        }
+    }
+
+    pub fn read_packet_nonblock(session: Session, buff: &mut [u8]) -> std::result::Result<usize, ReadError> {
+        let mut size = buff.len() as u32;
+        let res_code: Code = unsafe { ffi::read_packet_nonblock(session, buff.as_mut_ptr(), &mut size) };
+
+        match res_code {
+            SUCCESS_CODE => Ok(size as usize),
+            NOT_ENOUGH_SIZE_CODE => Err(ReadError::NotEnoughSize(size as usize)),
+            _ => {
+                const ERROR_NO_MORE_ITEMS: i32 = 259;
+                let err = Error::last_os_error();
+
+                if err.raw_os_error() == Some(ERROR_NO_MORE_ITEMS) {
+                    Err(ReadError::NoMoreItems)
+                } else {
+                    Err(ReadError::IoError(err))
+                }
+            }
+        }
+    }
+
     pub fn read_packet(
         session: Session,
         read_wait: Event,
         buff: &mut [u8],
-    ) -> Result<ReadResult> {
+    ) -> std::result::Result<usize, ReadError> {
         let mut size = buff.len() as u32;
         let res_code: Code = unsafe { ffi::read_packet(session, read_wait, buff.as_mut_ptr(), &mut size) };
 
         match res_code {
-            SUCCESS_CODE => Ok(ReadResult::Success(size as usize)),
-            NOT_ENOUGH_SIZE_CODE => Ok(ReadResult::NotEnoughSize(size as usize)),
-            _ => Err(Error::last_os_error())
+            SUCCESS_CODE => Ok(size as usize),
+            NOT_ENOUGH_SIZE_CODE => Err(ReadError::NotEnoughSize(size as usize)),
+            _ => Err(ReadError::IoError(Error::last_os_error()))
         }
     }
 
@@ -224,7 +307,7 @@ pub mod raw {
 
         match res {
             SUCCESS_CODE => Ok(()),
-            _ => Err(Error::new(ErrorKind::Other, "IP address error"))
+            _ => Err(Error::new(ErrorKind::Other, "Set ip address failed"))
         }
     }
 }
@@ -235,7 +318,7 @@ pub mod adapter {
 
     use once_cell::sync::Lazy;
 
-    use crate::{AdapterHandle, Event, HandleWrap, raw, ReadResult, Session};
+    use crate::{AdapterHandle, Event, HandleWrap, raw, ReadError, Session};
 
     fn initialize() -> Result<()> {
         static STATE: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
@@ -290,8 +373,8 @@ pub mod adapter {
             })
         }
 
-        pub fn get_drive_version(&self) -> Result<u32> {
-            raw::get_drive_version()
+        pub fn get_driver_version(&self) -> Result<u32> {
+            raw::get_driver_version()
         }
 
         pub fn close(self) {}
@@ -324,7 +407,7 @@ pub mod adapter {
     }
 
     impl WintunStream<'_> {
-        pub fn read_packet(&self, buff: &mut [u8]) -> Result<ReadResult> {
+        pub fn read_packet(&self, buff: &mut [u8]) -> std::result::Result<usize, ReadError> {
             raw::read_packet(
                 self.session.handle,
                 self.event.handle,
@@ -340,6 +423,38 @@ pub mod adapter {
     impl Drop for WintunStream<'_> {
         fn drop(&mut self) {
             raw::end_session(self.session.handle)
+        }
+    }
+
+    #[cfg(feature = "async")]
+    mod async_mod {
+        use std::io;
+
+        use crate::{raw, ReadError, WaitError};
+        use crate::adapter::WintunStream;
+
+        impl WintunStream<'_> {
+            pub async fn async_read_packet(&self, buff: &mut [u8]) -> Result<usize, ReadError> {
+                loop {
+                    let res = raw::read_packet_nonblock(self.session.handle, buff);
+
+                    match res {
+                        Err(ReadError::NoMoreItems) => {
+                            let event = self.event;
+
+                            match blocking::unblock(move || {
+                                let e = event;
+                                raw::wait_event(e.handle, u32::MAX)
+                            }).await {
+                                Ok(_) => {}
+                                Err(WaitError::IoError(e)) => return Err(ReadError::IoError(e)),
+                                Err(WaitError::Timeout) => return Err(ReadError::IoError(io::Error::new(io::ErrorKind::Other, "Wait event timeout")))
+                            };
+                        }
+                        _ => return res
+                    }
+                }
+            }
         }
     }
 }

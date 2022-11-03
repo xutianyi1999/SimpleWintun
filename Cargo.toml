@@ -2,7 +2,7 @@
 name = "simple_wintun"
 version = "0.1.0"
 authors = ["xutianyi <853122726@qq.com>"]
-edition = "2018"
+edition = "2021"
 description = "Wintun rust API library"
 license = "MIT OR Apache-2.0"
 
@@ -12,3 +12,7 @@ cc = "1"
 [dependencies]
 once_cell = "1"
 log = "0.4"
+blocking = { version = "1", optional = true }
+
+[features]
+async = ["blocking"]

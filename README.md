@@ -19,7 +19,6 @@ main.rs
 use std::net::Ipv4Addr;
 use std::ops::Range;
 use simple_wintun::adapter::WintunAdapter;
-use simple_wintun::ReadResult;
 
 const SRC_ADDR: Range<usize> = 12..16;
 const DST_ADDR: Range<usize> = 16..20;
@@ -33,8 +32,7 @@ fn main() {
 
     loop {
         let packet = match session.read_packet(&mut buff) {
-            Ok(ReadResult::Success(len)) => &buff[..len],
-            Ok(ReadResult::NotEnoughSize(_)) => continue,
+            Ok(len) => &buff[..len],
             Err(e) => {
                 eprintln!("error: {}", e);
                 return
