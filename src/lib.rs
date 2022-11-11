@@ -359,7 +359,7 @@ pub mod adapter {
 
             Ok(WintunAdapter {
                 adapter: HandleWrap::new(adapter),
-                adapter_name: tunnel_type.to_string(),
+                adapter_name: adapter_name.to_string(),
             })
         }
 
