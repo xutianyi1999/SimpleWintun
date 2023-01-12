@@ -407,6 +407,14 @@ pub mod adapter {
     }
 
     impl WintunStream<'_> {
+        pub fn session(&self) -> Session {
+            self.session.handle
+        }
+
+        pub fn event(&self) -> Event {
+            self.event.handle
+        }
+
         pub fn read_packet(&self, buff: &mut [u8]) -> std::result::Result<usize, ReadError> {
             raw::read_packet(
                 self.session.handle,
