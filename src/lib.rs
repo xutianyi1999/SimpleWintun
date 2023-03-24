@@ -10,6 +10,7 @@ pub type AdapterHandle = *mut c_void;
 pub type Session = *mut c_void;
 pub type Event = *mut c_void;
 pub type Code = u8;
+pub type LUID = u64;
 
 #[derive(Copy, Clone)]
 struct HandleWrap<H> {
@@ -29,7 +30,7 @@ unsafe impl<H> Sync for HandleWrap<H> {}
 mod ffi {
     use std::os::raw::c_char;
 
-    use crate::{AdapterHandle, Code, Event, Session};
+    use crate::{AdapterHandle, Code, Event, LUID, Session};
 
     extern "C" {
         pub fn initialize_wintun() -> Code;
@@ -88,6 +89,8 @@ mod ffi {
             ipaddr: *const c_char,
             subnet_mask: u8,
         ) -> Code;
+
+        pub fn get_adapter_luid(adapter: AdapterHandle) -> LUID;
     }
 }
 
@@ -142,7 +145,7 @@ pub mod raw {
     use std::os::raw::c_char;
     use std::ptr::null_mut;
 
-    use crate::{AdapterHandle, Code, Event, ffi, ReadError, Session, WaitError};
+    use crate::{AdapterHandle, Code, Event, ffi, LUID, ReadError, Session, WaitError};
 
     const SUCCESS_CODE: Code = 0;
     #[allow(dead_code)]
@@ -310,6 +313,12 @@ pub mod raw {
             _ => Err(Error::new(ErrorKind::Other, "Set ip address failed"))
         }
     }
+
+    pub fn get_adapter_luid(adapter: AdapterHandle) -> LUID {
+        unsafe {
+            ffi::get_adapter_luid(adapter)
+        }
+    }
 }
 
 pub mod adapter {
@@ -318,7 +327,7 @@ pub mod adapter {
 
     use once_cell::sync::Lazy;
 
-    use crate::{AdapterHandle, Event, HandleWrap, raw, ReadError, Session};
+    use crate::{AdapterHandle, Event, HandleWrap, LUID, raw, ReadError, Session};
 
     fn initialize() -> Result<()> {
         static STATE: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
@@ -397,6 +406,10 @@ pub mod adapter {
                 session: HandleWrap::new(session),
                 event: HandleWrap::new(event),
             })
+        }
+
+        pub fn get_adapter_luid(&self) -> LUID {
+            raw::get_adapter_luid(self.adapter.handle)
         }
     }
 
